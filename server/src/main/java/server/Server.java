@@ -64,8 +64,7 @@ public class Server {
                 return;
             }
         }
-
-        sender.sendMsg("Ненайден пользователь: " + receiver);
+        sender.sendMsg("Пользователь не найден: " + receiver);
     }
 
     public boolean isLoginAuthenticated(String login) {
@@ -78,7 +77,7 @@ public class Server {
     }
 
     public void broadcastClientList() {
-        StringBuilder sb = new StringBuilder("/clientlist");
+        StringBuilder sb = new StringBuilder("/clientList");
 
         for (ClientHandler c : clients) {
             sb.append(" ").append(c.getNickname());

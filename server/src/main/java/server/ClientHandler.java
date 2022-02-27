@@ -6,6 +6,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 
 public class ClientHandler {
     private Server server;
@@ -27,7 +29,9 @@ public class ClientHandler {
 
             new Thread(() -> {
                 try {
-//                    socket.setSoTimeout(5000);
+
+                    socket.setSoTimeout(1200);
+
                     while (true) {
                         String str = in.readUTF();
 
@@ -37,18 +41,18 @@ public class ClientHandler {
                                 break;
                             }
 
-                            if (str.startsWith("/auth")) {
+                            if (str.startsWith(Command.AUTH)) {
                                 String[] token = str.split(" ", 3);
                                 if (token.length < 3) {
                                     continue;
                                 }
-                                String newNick = server.getAuthService()
-                                        .getNicknameByLoginAndPassword(token[1], token[2]);
+
+                                String newNick = server.getAuthService().getNicknameByLoginAndPassword(token[1], token[2]);
                                 login = token[1];
                                 if (newNick != null) {
                                     if (!server.isLoginAuthenticated(login)) {
                                         nickname = newNick;
-                                        sendMsg("/auth_ok " + nickname);
+                                        sendMsg(Command.AUTH_OK + nickname);
                                         authenticated = true;
                                         server.subscribe(this);
                                         break;
@@ -56,23 +60,24 @@ public class ClientHandler {
                                         sendMsg("Учетная запись уже используется");
                                     }
                                 } else {
-                                    sendMsg("Логин / пароль не верны");
+                                    sendMsg("Логин или пароль неправильный");
                                 }
                             }
 
-                            if (str.startsWith("/reg")) {
+                            if (str.startsWith(Command.REG)) {
                                 String[] token = str.split(" ");
                                 if (token.length < 4) {
                                     continue;
                                 }
                                 if (server.getAuthService().registration(token[1], token[2], token[3])) {
-                                    sendMsg("/reg_ok");
+                                    sendMsg(Command.REG_OK);
                                 } else {
-                                    sendMsg("/reg_no");
+                                    sendMsg(Command.REG_NO);
                                 }
                             }
                         }
                     }
+
                     while (authenticated) {
                         String str = in.readUTF();
 
@@ -81,24 +86,33 @@ public class ClientHandler {
                                 sendMsg(Command.END);
                                 break;
                             }
-                            if (str.startsWith("/w ")) {
+                            if (str.startsWith(Command.W)) {
                                 String[] token = str.split(" ", 3);
                                 if (token.length < 3) {
                                     continue;
                                 }
                                 server.privateMsg(this, token[1], token[2]);
                             }
-
                         } else {
                             server.broadcastMsg(this, str);
                         }
                     }
-                    //SocketTimeoutException
+
+                } catch (SocketTimeoutException e) {
+                    System.out.println("Время подключения истекло");
+                    try {
+                        socket.setSoTimeout(1);
+                    } catch (SocketException ex) {
+                        ex.printStackTrace();
+                    }
+                    sendMsg(Command.END);
+
                 } catch (IOException e) {
                     e.printStackTrace();
                 } finally {
                     server.unsubscribe(this);
                     System.out.println("Клиент отключился");
+
                     try {
                         socket.close();
                     } catch (IOException e) {
@@ -127,5 +141,21 @@ public class ClientHandler {
 
     public String getLogin() {
         return login;
+    }
+
+    public Socket getSocket() {
+        return socket;
+    }
+
+    public void setSocket(Socket socket) {
+        this.socket = socket;
+    }
+
+    public Server getServer() {
+        return server;
+    }
+
+    public void setServer(Server server) {
+        this.server = server;
     }
 }

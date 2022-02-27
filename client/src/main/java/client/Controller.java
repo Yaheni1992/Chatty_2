@@ -23,6 +23,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.ResourceBundle;
 
 public class Controller implements Initializable {
@@ -106,17 +107,18 @@ public class Controller implements Initializable {
                                 break;
                             }
                             if (str.startsWith(Command.AUTH_OK)) {
-                                nickname = str.split(" ")[1];
+                                nickname = str.split(" ")[0];
                                 setAuthenticated(true);
                                 break;
                             }
-                            if(str.equals("/reg_ok") || str.equals("/reg_no")){
+                            if(str.equals(Command.REG_OK) || str.equals(Command.REG_NO)){
                                 regController.result(str);
                             }
                         } else {
                             textArea.appendText(str + "\n");
                         }
                     }
+
                     while (authenticated) {
                         String str = in.readUTF();
 
@@ -124,7 +126,7 @@ public class Controller implements Initializable {
                             if (str.equals(Command.END)) {
                                 break;
                             }
-                            if (str.startsWith("/clientlist")) {
+                            if (str.startsWith("/clientList")) {
                                 String[] token = str.split(" ");
 
                                 Platform.runLater(() -> {
@@ -152,9 +154,12 @@ public class Controller implements Initializable {
 
             }).start();
 
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
         } catch (Exception e) {
             e.printStackTrace();
         }
+
     }
 
     @FXML
@@ -163,6 +168,7 @@ public class Controller implements Initializable {
             out.writeUTF(textField.getText());
             textField.clear();
             textField.requestFocus();
+
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -186,9 +192,9 @@ public class Controller implements Initializable {
     private void setTitle(String nickname) {
         String title;
         if (nickname.equals("")) {
-            title = "Chatty";
+            title = "Чат";
         } else {
-            title = String.format("Chatty [ %s ]", nickname);
+            title = String.format("Чат [ %s ]", nickname);
         }
         Platform.runLater(() -> {
             stage.setTitle(title);
@@ -196,6 +202,7 @@ public class Controller implements Initializable {
     }
 
     public void clientListMouseAction(MouseEvent mouseEvent) {
+        System.out.println(clientList.getSelectionModel().getSelectedItem());
         String receiver = clientList.getSelectionModel().getSelectedItem();
         textField.setText(String.format("/w %s ", receiver));
     }
